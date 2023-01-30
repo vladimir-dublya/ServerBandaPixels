@@ -13,8 +13,8 @@ module.exports = function (req, res, next) {
         .json({ message: 'You must be loggining in to continue' });
     }
     const decodedData = jwt.verify(token, secret);
+    console.log(decodedData);
     req.user = decodedData;
-    console.log(decodedData.id);
     next();
   } catch (error) {
     console.log(error);

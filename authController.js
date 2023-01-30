@@ -85,10 +85,15 @@ class authController {
 
   async info(req, res) {
     try {
-      const securedToken = req.cookies.token;
-      console.log(req.cookies.token);
-      const user = await User.findOne({ id: req.cookies.token });
-      res.json({ id: user.id, id_type: user.id_type });
+      const access_token = req.cookies.access_token;
+      const decodedData = jwt.verify(access_token, secret);
+      console.log(decodedData.id)
+      const user = await User.findOne({ id: decodedData.id });
+      const token = generateAccessToken(user.id);
+      res.cookie('access_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+      }).json({ id: user.id, id_type: user.id_type });
     } catch (error) {
       return res.status(500).json({ message: `Cant find user` });
     }
@@ -97,7 +102,6 @@ class authController {
   async latency(req, res) {
     try {
       let latency = await ping.promise.probe('google.com');
-      const { id } = req.body;
       const user = await User.findOne({ id });
       const token = generateAccessToken(user.id);
       return res
