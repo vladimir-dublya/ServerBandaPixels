@@ -47,7 +47,7 @@ class authController {
       return res
         .cookie('access_token', token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          sameSite: "None",
         })
         .status(200)
         .json({ token });
@@ -74,7 +74,7 @@ class authController {
       return res
         .cookie('access_token', token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          SameSite: "None",
         })
         .json({ token });
     } catch (error) {
@@ -87,12 +87,11 @@ class authController {
     try {
       const access_token = req.cookies.access_token;
       const decodedData = jwt.verify(access_token, secret);
-      console.log(decodedData.id)
       const user = await User.findOne({ id: decodedData.id });
       const token = generateAccessToken(user.id);
       res.cookie('access_token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true, 
+        sameSite: "None",
       }).json({ id: user.id, id_type: user.id_type });
     } catch (error) {
       return res.status(500).json({ message: `Cant find user` });
@@ -102,12 +101,14 @@ class authController {
   async latency(req, res) {
     try {
       let latency = await ping.promise.probe('google.com');
-      const user = await User.findOne({ id });
+      const access_token = req.cookies.access_token;
+      const decodedData = jwt.verify(access_token, secret);
+      const user = await User.findOne({ id: decodedData.id });
       const token = generateAccessToken(user.id);
       return res
         .cookie('access_token', token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          sameSite: "None",
         })
         .json({ latency: latency.time });
     } catch (error) {
@@ -117,8 +118,8 @@ class authController {
   }
 
   async logout(req, res) {
-    try {
-      
+    try { 
+      res.clearCookie('access_token');
     } catch (error) {
       
     }
