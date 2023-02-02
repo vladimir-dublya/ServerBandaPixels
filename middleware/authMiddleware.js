@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { secret } = require('../config');
-module.exports = function (req, res, next) {
+const User = require('../models/User');
+const Token = require('../models/Token');
+
+module.exports = async function (req, res, next) {
   if (req.method === 'OPTIONS') {
     next();
   }
@@ -13,8 +16,13 @@ module.exports = function (req, res, next) {
         .json({ message: 'You must be loggining in to continue' });
     }
     const decodedData = jwt.verify(token, secret);
-    req.user = decodedData;
-    next();
+    const { id } = decodedData;
+    const user = await User.findOne({ id });
+    const tokenFromDB = await Token.findOne({ user: user._id });
+    if (tokenFromDB !== null) {
+      req.user = decodedData;
+      next();
+    }
   } catch (error) {
     console.log(error);
     return res

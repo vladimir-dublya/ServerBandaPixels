@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const { secret } = require('./config');
 const ping = require('ping');
+const Token = require('./models/Token');
 
 let type;
 const EMAIL_REGEXP =
@@ -44,10 +45,12 @@ class authController {
       const user = new User({ id, id_type: type, password: hashPassword });
       await user.save();
       const token = generateAccessToken(user.id);
+      const tokenForBD = new Token({ user: user._id, token });
+      await tokenForBD.save();
       return res
         .cookie('access_token', token, {
           httpOnly: true,
-          sameSite: "None",
+          SameSite: 'None',
         })
         .status(200)
         .json({ token });
@@ -71,10 +74,12 @@ class authController {
         return res.status(400).json({ message: `User or password not valid` });
       }
       const token = generateAccessToken(user.id);
+      const tokenForBD = new Token({ user: user._id, token });
+      tokenForBD.save();
       return res
         .cookie('access_token', token, {
           httpOnly: true,
-          SameSite: "None",
+          SameSite: 'None',
         })
         .json({ token });
     } catch (error) {
@@ -89,10 +94,12 @@ class authController {
       const decodedData = jwt.verify(access_token, secret);
       const user = await User.findOne({ id: decodedData.id });
       const token = generateAccessToken(user.id);
-      res.cookie('access_token', token, {
-        httpOnly: true, 
-        sameSite: "None",
-      }).json({ id: user.id, id_type: user.id_type });
+      res
+        .cookie('access_token', token, {
+          httpOnly: true,
+          SameSite: 'None',
+        })
+        .json({ id: user.id, id_type: user.id_type });
     } catch (error) {
       return res.status(500).json({ message: `Cant find user` });
     }
@@ -108,7 +115,7 @@ class authController {
       return res
         .cookie('access_token', token, {
           httpOnly: true,
-          sameSite: "None",
+          SameSite: 'None',
         })
         .json({ latency: latency.time });
     } catch (error) {
@@ -118,10 +125,19 @@ class authController {
   }
 
   async logout(req, res) {
-    try { 
+    try {
+      const access_token = req.cookies.access_token;
+      const decodedData = jwt.verify(access_token, secret);
+      const user = await User.findOne({ id: decodedData.id });
+      if (Object.keys(req.query).length > 0) {
+        const tokenData = await Token.deleteMany({ user: user._id });
+      } else { 
+        const tokenData = await Token.deleteOne({ user: user._id });
+      }
       res.clearCookie('access_token');
+      return res.status(200).json({ message: 'Deleted' });
     } catch (error) {
-      
+      return res.status(500).json({ message: `Something wrong...` });
     }
   }
 }
